@@ -1,0 +1,53 @@
+[project]
+name = "langgraph-research-agent"
+version = "0.1.0"
+description = "A small, explicit LLM agent loop built with LangGraph: tool calling, RAG, step guard, CLI and FastAPI streaming."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Usman Khan", email = "work.usmankhan@gmail.com" }]
+requires-python = ">=3.11"
+dependencies = [
+    "langgraph>=1.2,<2",
+    "langchain-core>=1.8,<2",
+    "langchain-openai>=1.7,<2",
+    "pydantic-settings>=2.16,<3",
+    "fastapi>=0.162",
+    "uvicorn[standard]>=0.54",
+    "rich>=15,<16",
+    "numpy>=2,<3",
+    "ddgs>=9,<10",
+    "tavily-python>=0.8,<1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2,<10",
+    "httpx>=0.28,<1",
+    "ruff>=0.17,<0.18",
+]
+
+[project.urls]
+Homepage = "https://github.com/Usman5K/langgraph-research-agent"
+Repository = "https://github.com/Usman5K/langgraph-research-agent"
+Issues = "https://github.com/Usman5K/langgraph-research-agent/issues"
+
+[project.scripts]
+research-agent = "agent.cli:main"
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
