@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LangGraph Research Agent</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; color: #1d1d1f; }
+  h1 { font-size: 1.4rem; margin-bottom: .2rem; }
+  p.sub { color: #666; margin-top: 0; }
+  form { display: flex; gap: .5rem; margin: 1rem 0; }
+  textarea { flex: 1; min-height: 3.2rem; padding: .5rem; font: inherit; border: 1px solid #ccc; border-radius: 6px; }
+  button { padding: 0 1.2rem; font: inherit; border: 0; border-radius: 6px; background: #2457d6; color: #fff; cursor: pointer; }
+  button:disabled { background: #9aa9cf; cursor: wait; }
+  .step { border-left: 4px solid #ccc; background: #f7f7f9; padding: .5rem .75rem; margin: .5rem 0; border-radius: 4px; white-space: pre-wrap; word-break: break-word; }
+  .step b { display: block; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: #555; }
+  .tool_call { border-color: #e0a100; } .tool_result { border-color: #2f80ed; }
+  .thought { border-color: #17a2b8; } .answer { border-color: #27ae60; background: #eefaf2; }
+  .error { border-color: #d63031; background: #fdeeee; }
+  code { font-size: .85rem; }
+  #status { color: #666; font-size: .9rem; min-height: 1.2rem; }
+</style>
+</head>
+<body>
+<h1>LangGraph Research Agent</h1>
+<p class="sub">An LLM drives a tool-calling loop (web search, calculator, docs RAG). Every step streams in live.</p>
+<form id="ask">
+  <textarea id="q" placeholder="e.g. What is the p95 latency target of Kestrel's ingest API, and how many ms is that above 150?" required></textarea>
+  <button id="go" type="submit">Ask</button>
+</form>
+<div id="status" aria-live="polite"></div>
+<div id="steps"></div>
+<script>
+const form = document.getElementById("ask"), q = document.getElementById("q");
+const go = document.getElementById("go"), out = document.getElementById("steps"), status = document.getElementById("status");
+
+function card(kind, title, body) {
+  const div = document.createElement("div");
+  div.className = "step " + kind;
+  const b = document.createElement("b"); b.textContent = title;
+  div.append(b, document.createTextNode(body));
+  out.append(div);
+}
+
+function render(step) {
+  if (step.type === "tool_call") card("tool_call", "tool call: " + step.tool, JSON.stringify(step.args));
+  else if (step.type === "tool_result") card("tool_result", "result: " + step.tool, step.content);
+  else if (step.type === "thought") card("thought", "thought", step.content);
+  else if (step.type === "answer") card("answer", "final answer", step.content);
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  out.innerHTML = ""; go.disabled = true; status.textContent = "Thinking...";
+  try {
+    const res = await fetch("/ask/stream", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({question: q.value.trim()}),
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status + ": " + (await res.text()));
+    const reader = res.body.getReader(), decoder = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const {value, done} = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, {stream: true});
+      let i;
+      while ((i = buf.indexOf("\n\n")) >= 0) {        // one SSE event per blank-line block
+        const block = buf.slice(0, i); buf = buf.slice(i + 2);
+        const event = (block.match(/^event: (.*)$/m) || [])[1];
+        const data = (block.match(/^data: (.*)$/m) || [])[1];
+        if (event === "error") throw new Error(JSON.parse(data).detail);
+        if (event && event !== "done" && data) render(JSON.parse(data));
+      }
+    }
+    status.textContent = "Done.";
+  } catch (err) {
+    card("error", "error", err.message); status.textContent = "";
+  } finally {
+    go.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
