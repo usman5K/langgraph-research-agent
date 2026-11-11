@@ -9,6 +9,9 @@ def test_chunks_are_split_by_section():
     chunks = load_chunks(DOCS)
     assert len(chunks) >= 9
     assert {"source", "section"} <= chunks[0].metadata.keys()
+    # only handbook markdown is indexed (docs/assets holds README images, not knowledge)
+    sources = {c.metadata["source"] for c in chunks}
+    assert sources == {"architecture.md", "deployment.md", "oncall.md"}
 
 
 def test_offline_retrieval_finds_the_right_doc(monkeypatch):

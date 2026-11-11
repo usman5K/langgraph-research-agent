@@ -72,9 +72,18 @@ uv run python -m agent "How much higher is Kestrel's insights p95 latency target
 uv run uvicorn agent.api:app --reload --port 8000
 ```
 
-Then open **http://localhost:8000**. The page is a single static HTML file (vanilla JS, no build
-step). It posts your question to the streaming endpoint and renders each tool call, result and the
-final answer as they arrive.
+Then open **http://localhost:8000**. The UI is a single static HTML file: vanilla JS, system
+fonts, no framework, no build step and no CDN. It reads the SSE stream and draws the run as a
+timeline: numbered steps with elapsed time, tool args in monospace, collapsible tool results, and a
+final answer with safely rendered markdown and a source list. It has light and dark themes,
+<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Enter</kbd> to run, a Stop button, and separate states for a
+missing API key, a dropped connection and the step limit.
+
+![Web UI showing a finished run as a step timeline](docs/assets/ui.png)
+
+*The screenshot is the built-in **UI preview**: open http://localhost:8000/?demo=1 to replay a
+scripted, clearly fake trace in the browser. No API key is needed and no model is called, so it is
+not real agent output.*
 
 | Endpoint | Description |
 | --- | --- |
@@ -158,9 +167,10 @@ check that:
 │   ├── api.py            # FastAPI: GET /, POST /ask, POST /ask/stream (SSE)
 │   ├── cli.py            # `python -m agent "question"` with rich output
 │   ├── config.py         # pydantic-settings
-│   ├── static/index.html # no-build web UI
+│   ├── static/index.html # no-build web UI (timeline, dark mode, ?demo=1 preview)
 │   └── tools/            # web_search, calculator, search_docs (RAG)
-├── docs/                 # sample knowledge base for search_docs
+├── docs/                 # sample knowledge base for search_docs (*.md only)
+│   └── assets/ui.png     # README screenshot (not indexed)
 ├── tests/                # offline tests with a scripted LLM
 ├── Dockerfile · Makefile · pyproject.toml · uv.lock
 └── .github/workflows/ci.yml

@@ -52,7 +52,10 @@ def test_index_serves_web_ui(client):
     res = client.get("/")
     assert res.status_code == 200
     assert res.headers["content-type"].startswith("text/html")
-    assert "/ask/stream" in res.text and "<form" in res.text
+    html = res.text
+    assert "/ask/stream" in html and "<form" in html
+    assert 'aria-live="polite"' in html and "AbortController" in html
+    assert "prefers-color-scheme: dark" in html and "?demo=1" in html
 
 
 def test_missing_api_key_is_a_clean_503(monkeypatch):
